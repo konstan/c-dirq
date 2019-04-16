@@ -58,6 +58,56 @@
 #define TMP2NAME(_d) (_d->buffer + _d->tmp2_offset + _d->pathlen +  1)
 
 /*
+ *  dirq_add_buf(DIRQ, BUFFER, LENGTH): NAME success | NULL error
+ */
+
+const char *dirq_add_buf (dirq_t dirq, const char *buffer, int buf_len)
+{
+  char *tmppath;
+  int fd, result, offset, done;
+  // char buffer[8192];
+
+  tmppath = TMP1BUF(dirq);
+  /* setup the insertion directory */
+  result = set_insertion_directory(dirq);
+  if (result != 0)
+    return(NULL);
+  /* create new path to hold data */
+  while (1) {
+    set_new_name(dirq, dirq->tmp1_offset);
+    strcpy(TMP1NAME(dirq) + ELEMENT_LENGTH, TEMPORARY_SUFFIX);
+    fd = open(tmppath, O_WRONLY|O_CREAT|O_EXCL, 0666);
+    if (fd >= 0)
+      break;
+    if (errno != EEXIST) {
+      error_set(dirq, errno, "cannot open(%s): %s", tmppath, ERROR);
+      return(NULL);
+    }
+  }
+  /* save data into new path */
+  offset = 0;
+  while (offset < buf_len) {
+    done = write(fd, &buffer[offset], buf_len-offset);
+    if (done < 0) {
+      error_set(dirq, result, "cannot write(%s): %s", tmppath, ERROR);
+      (void) close(fd); /* best effort cleanup... */
+      return(NULL);
+    }
+    offset += done;
+  }
+  if (close(fd) != 0) {
+      error_set(dirq, errno, "cannot close(%s): %s", tmppath, ERROR);
+      return(NULL);
+  }
+  /* add the newly created path */
+  result = add_temporary_path(dirq, tmppath);
+  if (result != 0)
+    return(NULL);
+  /* return the element name */
+  return(TMP2NAME(dirq));
+}
+
+/*
  * dirq_add(DIRQ, BUFFER, LENGTH): NAME success | NULL error
  */
 

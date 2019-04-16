@@ -80,6 +80,7 @@ const char *dirq_next  (dirq_t dirq);
  */
 
 const char *dirq_add      (dirq_t dirq, dirq_iow cb);
+const char *dirq_add_buf  (dirq_t dirq, const char *buf, int buf_len);
 const char *dirq_add_path (dirq_t dirq, const char *path);
 int         dirq_get      (dirq_t dirq, const char *name, dirq_ior cb);
 const char *dirq_get_path (dirq_t dirq, const char *name);

@@ -45,6 +45,11 @@ test: dqt
 	./dqt -d --count 1000 --path $$tempdir/new simple; \
 	rmdir $$tempdir
 
+test-buf: dqt
+	@tempdir=`mktemp -d -t c-dirq-XXXXX`; \
+	./dqt -d --count 1000 --path $$tempdir/new simple-buf; \
+	rmdir $$tempdir
+
 install: libdirq.a libdirq.so
 	install -d $(INSTALLROOT)$(INCLUDEDIR)
 	install -m 0644 dirq.h $(INSTALLROOT)$(INCLUDEDIR)

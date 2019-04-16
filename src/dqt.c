@@ -323,6 +323,29 @@ static void test_add (void)
   debug(1, "added %d elements", OptCount);
 }
 
+static void test_add_buf (void)
+{
+  int i;
+  const char *name, *errstr;
+
+  debug(0, "adding %d elements to the queue directly from buffer...", OptCount);
+  setup();
+  for (i=0; i<OptCount; i++) {
+    new_element(i);
+    BufOffset = 0;
+    name = dirq_add_buf(DirQ, Buffer, BufLength);
+    if (name == NULL) {
+      errstr = dirq_get_errstr(DirQ);
+      assert(errstr != NULL);
+      die("adding failed: %s", errstr);
+    }
+    if (OptDebug > 1)
+      debug(0, "added element %s", name);
+  }
+  cleanup();
+  debug(1, "added %d elements", OptCount);
+}
+
 /*
  * remove test
  */
@@ -518,6 +541,61 @@ static void test_simple (void)
   debug(0, "finished simple test successfully");
 }
 
+static void test_simple_buf (void)
+{
+  struct stat sb;
+  DIR *dirp;
+  struct dirent *dp;
+  char dirname[32];
+
+  if (!OptCount)
+    die("missing option: --count");
+  assert(strlen(OptPath) < 980);
+  if (stat(OptPath, &sb) != 0) {
+    if (errno != ENOENT)
+      die("cannot stat(%s): %s", OptPath, ERROR);
+  } else {
+    die("cannot use existing path for simple test: %s", OptPath);
+  }
+  test_info();
+  test_add_buf();
+  test_count();
+  test_size();
+  test_purge();
+  test_iterate(DO_GET);
+  test_remove();
+  test_purge();
+  dirname[0] = '\0';
+  dirp = opendir(OptPath);
+  if (!dirp)
+      die("cannot opendir(%s): %s", OptPath, ERROR);
+  while (1) {
+    dp = readdir(dirp);
+    if (!dp)
+      break;
+    if (dp->d_name[0] == '.') {
+      if (dp->d_name[1] == '\0')
+        continue;
+      if (dp->d_name[1] == '.' && dp->d_name[2] == '\0')
+        continue;
+    }
+    if (dirname[0])
+      die("unexpected directory: %s", dp->d_name);
+    assert(strlen(dp->d_name) == 8);
+    strcpy(dirname, dp->d_name);
+  }
+  if (closedir(dirp) < 0)
+      die("cannot closedir(%s): %s", OptPath, ERROR);
+  if (!dirname[0])
+    die("missing sub-directory");
+  sprintf(Buffer, "%s/%s", OptPath, dirname);
+  if (rmdir(Buffer) != 0)
+    die("cannot rmdir(%s): %s", Buffer, ERROR);
+  if (rmdir(OptPath) != 0)
+    die("cannot rmdir(%s): %s", OptPath, ERROR);
+  debug(0, "finished simple test successfully");
+}
+
 /*
  * usage
  */
@@ -624,6 +702,8 @@ int main(int argc, char *argv[])
     usleep(OptSleep * 1e6);
   if (strcmp(argv[optind], "add") == 0) {
     test_add();
+  } else if (strcmp(argv[optind], "add-buf") == 0) {
+    test_add_buf();
   } else if (strcmp(argv[optind], "count") == 0) {
     test_count();
   } else if (strcmp(argv[optind], "get") == 0) {
@@ -641,6 +721,8 @@ int main(int argc, char *argv[])
       test_remove();
   } else if (strcmp(argv[optind], "simple") == 0) {
     test_simple();
+  } else if (strcmp(argv[optind], "simple-buf") == 0) {
+    test_simple_buf();
   } else if (strcmp(argv[optind], "size") == 0) {
     test_size();
   } else {

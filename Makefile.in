@@ -43,6 +43,9 @@ tag:
 test:
 	@make -C src test
 
+test-buf:
+	@make -C src test-buf
+
 install:
 	@make -C doc install
 	@make -C src install
